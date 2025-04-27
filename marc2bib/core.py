@@ -31,7 +31,20 @@ BOOK_REQ_TAGFUNCS = {
     "publisher": default_tagfuncs.get_publisher,
     "title": default_tagfuncs.get_title,
     "year": default_tagfuncs.get_year,
+    "pages": default_tagfuncs.get_pages,
+    "address": default_tagfuncs.get_address,
+    "edition": default_tagfuncs.get_edition,
+    "editor": default_tagfuncs.get_editor,
+    "summary": default_tagfuncs.get_summary,
+    "volume": default_tagfuncs.get_volume,
+    "volumes": default_tagfuncs.get_volumes,
+    "note": default_tagfuncs.get_note,
+    "number": default_tagfuncs.get_volume,
+    "series": default_tagfuncs.get_series,
+    "subtitle": default_tagfuncs.get_subtitle,
+    "isbn": default_tagfuncs.get_isbn,
 }
+
 
 BOOK_OPT_TAGFUNCS = {
     "address": default_tagfuncs.get_address,
