@@ -5,6 +5,7 @@ from typing import Optional
 
 from pymarc import Record  # type: ignore
 
+import spacy
 
 def get_address(record: Record) -> Optional[str]:
     # https://www.loc.gov/marc/bibliographic/bd25x28x.html
@@ -22,27 +23,94 @@ def get_author(record: Record) -> Optional[str]:
     # https://www.loc.gov/marc/bibliographic/bd600.html
     # https://www.loc.gov/marc/bibliographic/bd800.
     authors = []
-    field = record["100"]
-    if field:
-      if "a" in field:
-        name = field["a"]
-        if field.indicator1 == "0":
-          parts = name.split(", ")
-          name = f"{parts[1]}, {parts[0]}"
+    fields = record.get_fields("100", "400", "600", "700", "800")
+    for field in fields:
+      name = field["a"] if "a" in field else ""
+      if "e" in field:
+        role = field["e"]
+        if not role.lower() in ["author", "автор", "авт.", "compiled by", "auth."]:
+          name = ""
+      if name:
+        parts = name.split(",")
+        if len(parts) > 1:
+          if field.indicator1 == "0":
+            name = f"{parts[1].strip()}, {parts[0].strip()}"
+          else:
+            name = f"{parts[0].strip()}, {parts[1].strip()}"
         authors.append(name)
-    fields = record.get_fields("400", "600", "700", "800")
-    if fields:
-      for field in fields:
-        if field:
-          if "e" in field:
-            role = field["e"]
-            if role.lower() in ["author", "автор", "авт.", "compiled by"]:
-              name = field["a"]
-              if field.indicator1 == "0":
-                parts = name.split(", ")
-                name = f"{parts[1]}, {parts[0]}"
-              authors.append(name)
+    field = record.get("245")
+    if field and "c" in field:
+      name = field["c"]
+      authors1 = parse_authors_nlp(name)
+      for author1 in authors1:
+        str = author1.split(' ')[0]
+        fFind = False
+        for author in authors:
+          if str.casefold() == author.split(' ')[0].casefold():
+            fFind = True
+            break     
+        if not fFind:
+          authors.append(author1)
     return " and ".join(authors) if authors else None
+
+
+def parse_authors_nlp(input_string: str) -> list:
+    """
+    Обрабатывает строку с именами авторов с помощью Spacy и возвращает список в формате "фамилия, инициалы".
+
+    :param input_string: Исходная строка с ФИО авторов
+    :return: Список авторов
+    """
+    # Создаем объект документа Spacy
+    nlp = spacy.load("ru_core_news_sm")  # Для русского языка 
+
+    # Создаём NLP-документ
+    doc = nlp(input_string)
+    formatted_authors = []
+    surname = ""
+    initials = ""
+    for token in doc:
+      if token.text.strip() not in [',', '.']:
+        if initials and surname:
+          formatted_authors.append(f"{surname}, {initials.strip()}")
+          surname = ""
+          initials = ""
+        if token.text.strip().endswith('.'):
+          initials += f" {token.text.strip()}"
+        else:
+          if surname:
+            parts = re.split(r'(?<=[. ])', surname)
+            if len(parts) > 1:
+              initials1 = ""
+              surname1 = ""
+              for part in parts:
+                if part.strip().endswith('.'):
+                  initials1 += f" {part.strip()}"
+                else:
+                  surname1 = part.strip()
+              if initials1 and surname1:
+                formatted_authors.append(f"{surname1}, {initials1.strip()}")
+            else:
+              formatted_authors.append(surname)
+          surname = token.text.strip()
+    if surname:
+      if initials:
+        formatted_authors.append(f"{surname}, {initials.strip()}")
+      else:
+        parts = re.split(r'(?<=[. ])', surname)
+        if len(parts) > 1:
+          initials1 = ""
+          surname1 = ""
+          for part in parts:
+            if part.strip().endswith('.'):
+              initials1 += f" {part.strip()}"
+            else:
+              surname1 = part.strip()
+          if initials1 and surname1:
+            formatted_authors.append(f"{surname1}, {initials1.strip()}")
+        else:
+          formatted_authors.append(surname)
+    return formatted_authors
 
 
 def get_edition(record: Record) -> Optional[str]:
@@ -84,7 +152,7 @@ def get_publisher(record: Record) -> Optional[str]:
 
 def get_title(record: Record) -> Optional[str]:
     # https://www.loc.gov/marc/bibliographic/bd245.html
-    fields = record.get_fields("245")
+    fields = record.get_fields("245", "")
     for field in fields:
       title = field["a"] if "a" in field else ""
       subtitle = field["b"] if "b" in field else ""
