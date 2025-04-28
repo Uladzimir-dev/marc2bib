@@ -257,8 +257,11 @@ def get_isbn(record: Record) -> Optional[str]:
 def get_keywords(record: Record) -> Optional[str]:
     # https://www.loc.gov/marc/bibliographic/bd653.html
     keywords = ""
-    fields = record.get_fields("653")
+    fields = record.get_fields("650", "653")
     for field in fields:
-        if "a" in field:  
-            keywords += f"{field['a'].strip()};\n"
-    return keywords
+      if "a" in field:
+        if field.tag == "650" and 'x' in field:
+          keywords += f"{field['a'].strip()} {field['x'].strip()};\n"
+        else:  
+          keywords += f"{field['a'].strip()};\n"
+    return keywords.rstrip("\n")
