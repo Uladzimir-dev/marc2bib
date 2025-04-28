@@ -41,8 +41,8 @@ BOOK_REQ_TAGFUNCS = {
     "note": default_tagfuncs.get_note,
     "number": default_tagfuncs.get_volume,
     "series": default_tagfuncs.get_series,
-    "subtitle": default_tagfuncs.get_subtitle,
     "isbn": default_tagfuncs.get_isbn,
+    "keywords": default_tagfuncs.get_keywords,
 }
 
 

@@ -2,6 +2,7 @@
 
 import re
 from typing import Optional
+from numpy import tile
 
 from pymarc import Record  # type: ignore
 
@@ -121,7 +122,7 @@ def get_edition(record: Record) -> Optional[str]:
       additional_info  = field["b"] if "b" in field else ""
       return f"{edition} {additional_info}".strip()
     else:
-      return None
+      return ""
 
 
 def get_editor(record: Record) -> Optional[str]:
@@ -142,23 +143,11 @@ def get_editor(record: Record) -> Optional[str]:
 
 
 def get_publisher(record: Record) -> Optional[str]:
-  fields = record.get_fields("260", "264")
-  if fields:
-    for field in fields:
-      if field and "b" in field:
-        return field["b"]
-  return None
+   return record.publisher
          
 
 def get_title(record: Record) -> Optional[str]:
-    # https://www.loc.gov/marc/bibliographic/bd245.html
-    fields = record.get_fields("245", "")
-    for field in fields:
-      title = field["a"] if "a" in field else ""
-      subtitle = field["b"] if "b" in field else ""
-      return f"{title} {subtitle}".strip()
-    else:
-      return None
+    return record.title
 
 
 def get_subtitle(record: Record) -> Optional[str]:
@@ -171,13 +160,7 @@ def get_subtitle(record: Record) -> Optional[str]:
 
 
 def get_year(record: Record) -> Optional[str]:
-    # https://www.loc.gov/marc/bibliographic/bd25x28x.html
-  fields = record.get_fields("260", "264")
-  if fields:
-    for field in fields:
-      if field and "c" in field:
-        return field["c"].lstrip("@")
-  return None
+    return record.pubyear
 
 
 def get_volume(record: Record) -> Optional[str]:
@@ -231,7 +214,7 @@ def get_note(record: Record) -> Optional[str]:
       for field in fields:
         if "a" in field:
           notes.append(field["a"])
-    return "; ".join(notes) if notes else ""
+    return ";\n ".join(notes) if notes else ""
 
 
 def get_series(record: Record) -> Optional[str]:
@@ -251,23 +234,31 @@ def get_series(record: Record) -> Optional[str]:
 
 def get_summary(record: Record) -> Optional[str]:
     # https://www.loc.gov/marc/bibliographic/bd520.html
-    field_520 = record.get_fields("520")
-    if field_520:
-      # Извлекаем основную аннотацию ($a) и расширение ($b), если они есть
-      annotation = field_520["a"] if "a" in field_520 else ""
-      additional_info = field_520["b"] if "b" in field_520 else ""
-      return f"{annotation} {additional_info}".strip()
-    else:
-      return ""
+    fields = record.get_fields("520")
+    annotation = ""
+    for field in fields:
+      annotation += field["a"] if "a" in field else ""
+      annotation += f" {field['b']}" if "b" in field else ""
+    return annotation
 
 
 def get_isbn(record: Record) -> Optional[str]:
-    # https://www.loc.gov/marc/bibliographic/bd520.html
+    # https://www.loc.gov/marc/bibliographic/bd020.html
     isbns = ""
     fields_020 = record.get_fields("020")
     for field in fields_020:
         if "a" in field:  # Основной ISBN
             isbns = field["a"].strip()
         if "z" in field:  # Недействительный ISBN
-            isbns.join(f"Invalid: {field['z'].strip()}")
+            isbns +=f" Invalid: {field['z'].strip()}"
     return isbns
+
+
+def get_keywords(record: Record) -> Optional[str]:
+    # https://www.loc.gov/marc/bibliographic/bd653.html
+    keywords = ""
+    fields = record.get_fields("653")
+    for field in fields:
+        if "a" in field:  
+            keywords += f"{field['a'].strip()};\n"
+    return keywords
